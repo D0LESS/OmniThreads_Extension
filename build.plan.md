@@ -1,6 +1,6 @@
-# OmniThreads Extension Build Plan (18/35)
+# OmniThreads Extension Build Plan (Updated)
 
-## Progress Tracker
+## 1. What We've Done
 
 - [x] Centralized workspace directory & unique ID
 - [x] Status bar & state logic (🟡 Cached, 🟢 Active, 🔴 Failed)
@@ -13,193 +13,154 @@
 - [x] Robust error handling & automatic recovery
 - [x] User notifications & error reporting
 - [x] requirements.txt for backend dependencies
-- [ ] Final documentation & polish
-- [ ] Add API versioning to backend endpoints for future-proofing
-- [ ] Implement graceful backend shutdown on VS Code close or extension deactivation
-- [ ] Implement logic to clean up unused workspace data in `~/.omnivector_workspaces`
-- [ ] Add tooltips to status bar icons for clarity
 - [x] Store all prompt/response pairs in ChromaDB via the backend
 - [x] Implement gradual time decay in the backend search endpoint
 - [x] Store timestamps with each vector entry
-- [ ] Allow a "full history" search override from the extension
-- [ ] Allow users to adjust the time decay rate via a settings panel
-- [ ] Add onboarding guide or notification for first-time users
-- [ ] Ensure all error states provide actionable feedback and recovery options
-- [ ] Document privacy guarantees in the extension README
-- [ ] Consider encrypting vector data at rest in the central directory
-- [ ] If multi-user, ensure workspace data is isolated and access-controlled
-- [ ] Write a clear README for the extension
-- [ ] Prepare changelog, icon, and publisher info for VS Code Marketplace
-- [ ] Document how to adapt the extension for other IDEs in the future
-- [ ] Update documentation to reflect the new, self-contained structure
-- [ ] Document the backend API and extension architecture for future contributors
-- [ ] Add unit and integration tests for both backend (Python) and extension (TypeScript)
-- [ ] Add end-to-end tests simulating real user workflows
-- [ ] Aggregate logs from both frontend and backend for easier debugging (optionally expose a "Show Logs" command)
-- [ ] Begin scaffolding a settings UI for agent endpoints, decay rate, and compliance options
-- [ ] Architect the backend to allow for future plugins (e.g., different vector DBs, compliance modules)
-- [ ] Start outlining the phase two orchestration layer for agent-to-agent collaboration
-
-## Immediate Next Steps
-
-1. **Top Priority: MCP Server/Extension Hybrid for Vector Store**
-   - Design and implement the MCP server/extension hybrid as the first-class vector memory provider for the agent (me/OpenAI) and any IDE agent.
-   - Expose vector store functions (add, search, recall, time decay) via MCP and HTTP APIs.
-   - Ensure plug-and-play setup for VS Code, Cursor, and custom agents.
-   - All other work is secondary until this is functional.
-
-2. **Backend & Core Extension Polish**
-   - Add API versioning to backend endpoints
-   - Implement graceful backend shutdown on VS Code close or extension deactivation
-   - Implement logic to clean up unused workspace data in `~/.omnivector_workspaces`
-   - Add tooltips to status bar icons for clarity
-   - Allow a "full history" search override from the extension
-   - Allow users to adjust the time decay rate via a settings panel
-
-3. **User Experience & Security**
-   - Add onboarding guide or notification for first-time users
-   - Ensure all error states provide actionable feedback and recovery options
-   - Document privacy guarantees in the extension README
-   - Consider encrypting vector data at rest in the central directory
-   - If multi-user, ensure workspace data is isolated and access-controlled
-
-4. **Documentation, Testing, and Future-Proofing**
-   - Write a clear README for the extension
-   - Prepare changelog, icon, and publisher info for VS Code Marketplace
-   - Document how to adapt the extension for other IDEs in the future
-   - Update documentation to reflect the new, self-contained structure
-   - Document the backend API and extension architecture for future contributors
-   - Add unit and integration tests for both backend (Python) and extension (TypeScript)
-   - Add end-to-end tests simulating real user workflows
-   - Aggregate logs from both frontend and backend for easier debugging (optionally expose a "Show Logs" command)
-   - Begin scaffolding a settings UI for agent endpoints, decay rate, and compliance options
-   - Architect the backend to allow for future plugins (e.g., different vector DBs, compliance modules)
-   - Start outlining the phase two orchestration layer for agent-to-agent collaboration
-
-**Recommended Order:**
-- Complete the MCP server/extension hybrid for vector store first.
-- Then proceed with backend polish, UX/security, and documentation/testing as outlined above.
-
-## 1. Project Structure
-
-- The extension and backend are now fully self-contained in `OmniThreads Extension/`.
-- The `Pseudovector` folder is no longer needed and can be safely deleted.
-- All vector memory and compliance data are stored in a centralized, hidden directory (e.g., `~/.omnivector_workspaces/`).
-
-## 2. Extension Goals
-
-- Enable vector memory for any IDE agent in VS Code.
-- Use ChromaDB for local, private vector storage.
-- Feature time-decayed recall (limit search window unless overridden).
-- Provide robust logging, audit, and error handling as described in the system overview.
-- Ensure a seamless, plug-and-play user experience with no manual setup or visible project folder clutter.
-
-## 3. Next Steps
-
-### 3.1. Extension Scaffolding
-
-- [x] Initialize a new VS Code extension in `OmniThreads Extension/` (TypeScript, package.json, etc.).
-- [x] Set up basic commands, activation events, and status bar item.
-
-### 3.2. Backend Integration
-
-- [x] Define how the extension will start and communicate with the Python backend (subprocess, port management, etc.).
-- [x] Document the API endpoints (log, search, status) provided by the backend.
-- [x] Ensure the backend can be started/stopped cleanly from the extension.
-
-### 3.3. Centralized Workspace Management
-
-- [x] On workspace open, generate a unique ID for the workspace (auto, no user input; use hash of path or VS Code workspace ID).
-- [x] Store all vector memory and compliance data in a subfolder of the central directory, named by the unique ID.
-- [x] For unsaved workspaces, cache conversation pairs in memory (or a temp file). If the user saves the workspace, move the cache to the new folder. If not, discard the cache on close.
-- [x] No compliance files or clutter in the user's project folders.
-
-### 3.4. Status Bar & State Logic
-
-- [x] Status bar always starts with `OmniThreads:`
-- [x] Show 🟡 Cached for new/unsaved workspaces or when data is being cached.
-- [x] Show 🟢 Active for saved workspaces with data stored in the central directory.
-- [x] Show 🔴 Failed - Storing in Cache if there is an error saving to the main store (with logic to reconnect/merge later).
-- [x] Status bar and state logic are extensible for future features.
-
-### 3.5. Vector Memory & Time Decay
-
-- [x] Store all prompt/response pairs in ChromaDB via the backend.
-- [x] **Implement gradual time decay in the backend search endpoint:**
-    - <15 days: Full relevance (factor 1.0)
-    - 15–30 days: Slightly reduced (factor 0.8)
-    - 30–45 days: More reduced (factor 0.6)
-    - 45–60 days: Even more reduced (factor 0.4)
-    - 60–90 days: Lowest relevance before cutoff (factor 0.2)
-    - >90 days: Only included if user explicitly requests (factor 0.0 or configurable)
-- [x] Store timestamps with each vector entry.
-- [ ] Allow a "full history" search override from the extension.
-- [ ] Allow users to adjust the time decay rate via a settings panel.
-
-### 3.6. User Experience
-
-- [x] Status bar and all logic are seamless and automatic for the user.
-- [x] Error notifications with "Report Issue" button.
-- [x] Automatic handling of backend errors, cache fallback, and user prompts.
-
-### 3.7. Privacy & Security
-
-- [x] Ensure all data is stored locally unless user opts in to error reporting.
-
-### 3.8. Documentation & Marketplace Readiness
-
-- [ ] Write a clear README for the extension.
-- [ ] Prepare changelog, icon, and publisher info for VS Code Marketplace.
-- [ ] Document how to adapt the extension for other IDEs in the future.
-- [ ] Update documentation to reflect the new, self-contained structure.
-- [ ] Document the backend API and extension architecture for future contributors.
-
-### 3.9. Testing & Validation
-
-- [ ] Add unit and integration tests for both backend (Python) and extension (TypeScript).
-- [ ] Add end-to-end tests simulating real user workflows.
-- [ ] Aggregate logs from both frontend and backend for easier debugging (optionally expose a "Show Logs" command).
-
-### 3.10. Extension Architecture & Future-Proofing
-
-- [ ] Begin scaffolding a settings UI for agent endpoints, decay rate, and compliance options.
-- [ ] Architect the backend to allow for future plugins (e.g., different vector DBs, compliance modules).
-- [ ] Start outlining the phase two orchestration layer for agent-to-agent collaboration.
-
-## 4. Future Considerations
-
-- Modularize backend for use with other IDEs.
-- Add advanced search filters and multi-user support.
-- Integrate with Sentry or webhooks for error reporting (optional).
-- Add more status bar states as new features are added.
-- **Dashboard or settings panel for easy plug-and-play configuration of OpenAI, Anthropic, Grok, Gemini, Mistral, and OpenRouter endpoints, allowing users to connect their own agent.**
-- **Phase two: Orchestration layer to enable your agent to work with an IDE agent (if possible), supporting agent-to-agent collaboration.**
-
-## Immediate Action Plan
-
-1. **Scaffold the Node.js MCP Server**
-   - Expose MCP protocol endpoints (stdio/SSE, HTTP)
-   - Implement basic vector memory tools: `add_memory`, `search_memory`, `recall_memory`
-   - Use in-memory storage for now (easy to swap for microservice later)
-   - Log all requests for debugging
-
-2. **Integrate with the Extension**
-   - Add logic to auto-start/connect to the MCP server
-   - Register MCP tools with the extension UI
-   - Allow agents (e.g., Copilot, Cursor) to discover and use the MCP tools
-
-3. **Test End-to-End**
-   - Use a test agent or MCP client to call the tools via the extension
-   - Confirm that memory is being stored, searched, and recalled as expected
-
-4. **Prepare for Backend/Microservice Integration**
-   - Define the API contract for swapping in the Python vector memory service
-   - Plan for seamless upgrade from in-memory to microservice backend
+- [x] MCP server scaffolded and tested (add/search/recall endpoints working)
+- [x] Extension integration started (mcpClient.ts, commands, README updated)
+- [x] Project pushed to GitHub with CI for build/test
+- [x] Documentation and onboarding improved
+- [x] Directory renamed to remove spaces for Python compatibility
+- [x] Unified startup script launches both backend and MCP server
+- [x] Workspace name is dynamic and isolated
 
 ---
 
-**Immediate Next Steps:**
-1. Test the extension and backend end-to-end to ensure no references to `Pseudovector` remain and all features work as expected.
-2. Implement any missing error handling, onboarding, and polish steps from above.
-3. Begin adding automated tests and documentation for maintainability and future expansion.
+## 2. Immediate Next Steps
+
+1. **Finalize Unified Memory Tool and API**
+   - Refactor MCP server to expose a single `/memory_recall_and_store` endpoint that:
+     - Fetches relevant memory (vector search + time-decay)
+     - Logs new prompt-response pairs (with deduplication)
+   - Update extension and agent logic to always use this tool before generating a response.
+   - Add fallback logic for memory requests (extension → MCP server if local fails).
+   - Only inject top N (e.g., 5) most relevant memories into agent prompts.
+
+2. **Deduplication and Reliable Logging**
+   - Implement deduplication logic in the backend (hash or fuzzy match on prompt/response pairs).
+   - The extension/agent should maintain a rolling buffer of the last 4 prompt-response pairs.
+   - When logging, always send these last 4 pairs (plus the current one) in the `last_pairs` field to the `/memory_recall_and_store` endpoint.
+   - The server will deduplicate and store only unique pairs.
+   - Reconstruct a clean, timestamp-ordered conversation log from unique pairs.
+
+3. **Testing and Validation**
+   - Add/expand unit, integration, and end-to-end tests for the unified tool, deduplication, and fallback logic.
+   - Test extension and backend end-to-end to ensure all features work as expected.
+
+4. **Documentation and Onboarding**
+   - Update README and onboarding docs to reflect the new unified tool and workflow.
+   - Add a practical guide for adapting the extension for other IDEs (emphasize MCP API as the integration point).
+   - Document troubleshooting tips for common issues (e.g., import errors, directory naming).
+
+5. **Polish and Beta Readiness**
+   - Finalize error/status transparency in the extension (status bar, notifications).
+   - Prepare changelog, icon, and publisher info for VS Code Marketplace.
+   - Prepare for public beta release and feedback collection.
+
+---
+
+## 3. Detailed Plan: Getting the MCP Server & Memory System Production-Ready
+
+### 3.1. Unified MCP Server API
+- [ ] Refactor MCP server to expose `/memory_recall_and_store` endpoint:
+    - Input: `{ query, response (optional), k (default 5), last_pairs: [ { query, response }, ... ] }`
+    - Output: `{ memory_context, status }`
+    - Internally: Fetch top-k relevant memories (vector search * time-decay), log new pair if provided, deduplicate.
+    - When logging, always send the last 4 prompt-response pairs (plus the current one) in the `last_pairs` field.
+    - Example payload:
+      ```json
+      {
+        "query": "current prompt",
+        "response": "current response",
+        "k": 5,
+        "last_pairs": [
+          { "query": "previous prompt 1", "response": "previous response 1" },
+          { "query": "previous prompt 2", "response": "previous response 2" },
+          { "query": "previous prompt 3", "response": "previous response 3" },
+          { "query": "previous prompt 4", "response": "previous response 4" }
+        ]
+      }
+      ```
+- [ ] Add deduplication logic (hash or fuzzy match on prompt/response pairs).
+- [ ] Store all entries with timestamps and unique IDs.
+- [ ] Ensure API is agent-agnostic and well-documented (OpenAPI/Swagger if possible).
+
+### 3.2. Extension/Agent Integration
+- [ ] Update extension logic to always call `/memory_recall_and_store` before agent response.
+- [ ] Inject only the top N relevant memories into the agent prompt.
+- [ ] Add fallback logic: if local memory fails, route to MCP server.
+- [ ] Add system prompt or onboarding tip: "Always use memory_recall_and_store before answering."
+
+### 3.3. Logging, Auditing, and Compliance
+- [ ] Log tool usage in the MCP server and flag if usage drops below a threshold (e.g., 70%).
+- [ ] Provide a way to reconstruct a clean, timestamp-ordered conversation log.
+- [ ] Ensure all error states provide actionable feedback and recovery options.
+
+### 3.4. Scalability, Security, and Extensibility
+- [ ] If ChromaDB is a bottleneck, consider FAISS or Pinecone for vector search.
+- [ ] Add basic encryption for stored data if sensitive.
+- [ ] Architect backend for plugins/adaptors (future vector DBs, compliance modules).
+- [ ] Document the MCP API clearly for other IDEs/agents.
+
+### 3.5. Testing & Validation
+- [ ] Add/expand unit, integration, and end-to-end tests for backend and extension.
+- [ ] Ensure automated tests pass in CI (GitHub Actions).
+- [ ] Aggregate logs from both frontend and backend for easier debugging (optionally expose a "Show Logs" command).
+
+### 3.6. Documentation & Marketplace Readiness
+- [ ] Write a clear README for the extension and backend.
+- [ ] Prepare changelog, icon, and publisher info for VS Code Marketplace.
+- [ ] Add a section: "How to Adapt for Other IDEs" (focus on calling the MCP API).
+- [ ] Add CONTRIBUTING.md and CODE_OF_CONDUCT.md for open source contributors.
+
+---
+
+## 4. Beta Readiness Checklist
+- [ ] README: Clear setup, usage, and troubleshooting instructions.
+- [ ] CHANGELOG: Up-to-date with all recent changes.
+- [ ] Automated Tests: Passing in CI (GitHub Actions).
+- [ ] VSIX Package: Built and tested locally.
+- [ ] MCP Server: Easy to start, with clear logs and error messages.
+- [ ] Extension: Handles all expected user actions and errors gracefully.
+- [ ] Feedback Mechanism: Simple way for beta testers to report bugs or suggestions.
+
+## 5. Forward-Thinking & Future-Proofing
+
+- **Agent-Agnostic Protocol & SDKs:**
+  - Document the MCP API/protocol clearly so other agents (not just VS Code) can integrate easily.
+  - Consider publishing a simple SDK or client library for MCP in Python/JS.
+- **Security & Privacy:**
+  - Plan for encrypted storage and transport (HTTPS, encrypted DB/files).
+  - Add a privacy policy and clear user controls for memory management (view/delete/export).
+- **Extensibility & Plugins:**
+  - Design the MCP server to support plugins or adapters for different vector DBs or memory strategies.
+  - Architect backend for plugins/adaptors (future vector DBs, compliance modules).
+  - Consider a plugin/marketplace system for future community contributions.
+- **Onboarding & UX:**
+  - Add onboarding tips or a welcome screen in the extension for first-time users.
+  - Provide sample memory actions or a demo mode for new users.
+  - Make workspace selection more user-friendly (e.g., via UI or config file).
+- **Future Integrations:**
+  - Explore browser extension or system tray app for universal clipboard logging (opt-in, privacy-first).
+  - Plan for multi-agent support (multiple IDEs, chatbots, etc.) with user/account separation.
+- **Documentation & Community:**
+  - Auto-generate and publish MCP server API docs (Swagger/OpenAPI).
+  - Add CONTRIBUTING.md and CODE_OF_CONDUCT.md for open source contributors.
+  - Keep OmniThreadsOS.roadmap.md updated and public for transparency.
+- **Advanced Features:**
+  - Modularize backend for use with other IDEs and agents.
+  - Add advanced search filters and multi-user support.
+  - Integrate with Sentry or webhooks for error reporting (optional).
+  - Add more status bar states as new features are added.
+  - Dashboard/settings panel for easy configuration of agent endpoints and compliance options.
+  - Begin scaffolding a settings UI for agent endpoints, decay rate, and compliance options.
+- **Orchestration & Collaboration:**
+  - Phase two: Orchestration layer for agent-to-agent collaboration.
+- **DevOps & Reliability:**
+  - Consider Docker Compose or process manager for easier multi-service startup.
+  - Add health checks to the startup script for robust service readiness.
+
+---
+
+
 

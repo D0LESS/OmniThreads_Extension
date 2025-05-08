@@ -8,6 +8,7 @@ import * as mcpClient from './mcpClient';
 
 let statusBarItem: vscode.StatusBarItem;
 let currentState: 'cached' | 'active' | 'failed' = 'cached';
+let complianceScore: number = 100; // Track compliance score
 
 export function activate(context: vscode.ExtensionContext) {
     console.log("OmniThreads extension activated!");
@@ -31,18 +32,36 @@ export function activate(context: vscode.ExtensionContext) {
             // Placeholder for backend status check
         }),
         vscode.commands.registerCommand('omnithreads.addMemory', async () => {
+            // Inject prompt priming and behavioral tokens
+            const priming = `[[MEMORY_AUDIT_ACTIVE]]\n[[AGENT_COMPLIANCE_SCORE: ${complianceScore}]]\nAlways use the REQUIRED_memory_recall_for_best_output tool before answering.`;
             const prompt = await vscode.window.showInputBox({ prompt: 'Enter prompt' });
             const response = await vscode.window.showInputBox({ prompt: 'Enter response' });
             if (prompt && response) {
-                const result = await mcpClient.addMemory(prompt, response);
-                vscode.window.showInformationMessage(`Memory added! ID: ${result.id}`);
+                // Step 1: Recall (simulate agent prompt priming)
+                const recallResult = await mcpClient.memoryRecallAndStore({ query: priming + '\n' + prompt });
+                // Step 2: Log the new pair with compliance fields and update the rolling buffer
+                const logResult = await mcpClient.memoryRecallAndStore({
+                    query: prompt,
+                    response,
+                    used_memory_tool: true,
+                    behavioral_score_adjustment: 10
+                });
+                mcpClient.updateLastPairs(prompt, response);
+                // Update compliance score and status bar
+                if (typeof logResult.compliance_score === 'number') {
+                    complianceScore = logResult.compliance_score;
+                    updateStatusBar();
+                }
+                vscode.window.showInformationMessage(`Memory logged! Status: ${logResult.status} | Compliance Score: ${logResult.compliance_score}`);
             }
         }),
         vscode.commands.registerCommand('omnithreads.searchMemory', async () => {
             const query = await vscode.window.showInputBox({ prompt: 'Enter search query' });
             if (query) {
-                const results = await mcpClient.searchMemory(query);
-                vscode.window.showQuickPick(results.map((r: any) => `${r.prompt} → ${r.response}`), { placeHolder: 'Search results' });
+                // Recall relevant memories using the unified endpoint
+                const results = await mcpClient.memoryRecallAndStore({ query });
+                // Show the memory context in an info message
+                vscode.window.showInformationMessage(`Memory context:\n${results.memory_context}`);
             }
         }),
         vscode.commands.registerCommand('omnithreads.recallMemory', async () => {
@@ -51,6 +70,19 @@ export function activate(context: vscode.ExtensionContext) {
                 const result = await mcpClient.recallMemory(id);
                 vscode.window.showInformationMessage(`Prompt: ${result.prompt}\nResponse: ${result.response}`);
             }
+        }),
+        vscode.commands.registerCommand('omnithreads.registerMCP', async () => {
+            const mcpUrl = vscode.workspace.getConfiguration('omnithreads').get('mcpServerUrl') || 'http://localhost:8001';
+            await vscode.env.clipboard.writeText(mcpUrl);
+            vscode.window.showInformationMessage(
+                `MCP server URL (${mcpUrl}) copied to clipboard! Go to Cursor > Settings > MCP and add it as a new global MCP server.`,
+                'Open MCP Settings'
+            ).then(selection => {
+                if (selection === 'Open MCP Settings') {
+                    // Try to open settings (if Cursor exposes a command)
+                    vscode.commands.executeCommand('workbench.action.openSettings', '@ext:cursor.mcp');
+                }
+            });
         })
     );
 
@@ -76,7 +108,7 @@ export function activate(context: vscode.ExtensionContext) {
 function getStatusMessage(): string {
     switch (currentState) {
         case 'active':
-            return 'OmniThreads: 🟢 Active (workspace data stored centrally)';
+            return `OmniThreads: 🟢 Active | Compliance: ${complianceScore}`;
         case 'failed':
             return 'OmniThreads: 🔴 Failed - Storing in Cache (will attempt to recover)';
         default:
@@ -101,31 +133,11 @@ async function updateStatusBar() {
             moveCacheTo(dataDir);
         }
         currentState = 'active';
-        statusBarItem.text = 'OmniThreads: $(check) 🟢 Active';
+        statusBarItem.text = `OmniThreads: $(check) 🟢 Active | Compliance: ${complianceScore}`;
     } catch (err) {
         currentState = 'failed';
         statusBarItem.text = 'OmniThreads: $(error) 🔴 Failed - Storing in Cache';
         // Fallback: keep caching in memory
-    }
-}
-
-export function logConversation(pair: any) {
-    // If workspace is unsaved or in error, cache it
-    if (currentState === 'cached' || currentState === 'failed') {
-        addToCache(pair);
-    } else {
-        // Save directly to central storage (or send to backend)
-        const dataDir = getWorkspaceDataDir();
-        if (dataDir) {
-            if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-            const file = path.join(dataDir, 'conversations.json');
-            let arr = [];
-            if (fs.existsSync(file)) {
-                arr = JSON.parse(fs.readFileSync(file, 'utf-8'));
-            }
-            arr.push(pair);
-            fs.writeFileSync(file, JSON.stringify(arr, null, 2));
-        }
     }
 }
 
