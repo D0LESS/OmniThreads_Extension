@@ -100,4 +100,4 @@ OmniThreads Extension brings vector memory and compliance to any IDE agent in VS
    `vsce publish`
 
 ---
-For more, see the build plan and in-code documentation. 
+For more, see the build plan and in-code documentation. ECHO is on.
