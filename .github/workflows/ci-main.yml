@@ -44,9 +44,7 @@ jobs:
 
       - name: Run extension tests
         run: |
-          if [ -f "test_mcp.js" ]; then
-            npm test
-          fi
+          npm run test:extension
 
       - name: Lint Python
         run: |

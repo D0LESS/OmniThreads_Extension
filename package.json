@@ -46,7 +46,8 @@
     "vscode:prepublish": "tsc -p ./",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "test": "mocha -r ts-node/register src/test/**/*.ts"
+    "test": "mocha -r ts-node/register src/test/**/*.ts",
+    "test:extension": "node ./node_modules/@vscode/test/out/runTest.js"
   },
   "devDependencies": {
     "@types/chai": "^4.3.20",
