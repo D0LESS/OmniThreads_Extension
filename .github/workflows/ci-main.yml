@@ -55,4 +55,7 @@ jobs:
 
       - name: Lint JS/TS
         run: |
-          npm run lint || true 
+          npm run lint || true
+
+      - name: Check Python Version
+        run: python --version 
