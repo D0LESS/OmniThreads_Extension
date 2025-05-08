@@ -27,6 +27,23 @@ OmniThreads Extension brings vector memory and compliance to any IDE agent in VS
   ```
 - The extension will auto-start the backend as needed
 
+## MCP Server (Local MVP) Setup
+
+1. **Install Node.js** (v18+ recommended)
+2. In the project root, run:
+   ```sh
+   npm install
+   ```
+   This will install all dependencies for the MCP server (see `package.json`).
+3. **Start the MCP server:**
+   ```sh
+   node mcp_server.js
+   ```
+   The server will run on `http://localhost:8001` by default.
+
+- The MCP server is local-only for MVP. No Python dependencies are required unless you add a Python microservice later.
+- For Python microservices, use `requirements.txt` and run `pip install -r requirements.txt` as needed.
+
 ## Beta Tester Quick Start
 1. Install the extension and backend as above
 2. Open a workspace in VS Code

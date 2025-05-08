@@ -42,7 +42,13 @@
 
 ## Immediate Next Steps
 
-1. **Backend & Core Extension Polish**
+1. **Top Priority: MCP Server/Extension Hybrid for Vector Store**
+   - Design and implement the MCP server/extension hybrid as the first-class vector memory provider for the agent (me/OpenAI) and any IDE agent.
+   - Expose vector store functions (add, search, recall, time decay) via MCP and HTTP APIs.
+   - Ensure plug-and-play setup for VS Code, Cursor, and custom agents.
+   - All other work is secondary until this is functional.
+
+2. **Backend & Core Extension Polish**
    - Add API versioning to backend endpoints
    - Implement graceful backend shutdown on VS Code close or extension deactivation
    - Implement logic to clean up unused workspace data in `~/.omnivector_workspaces`
@@ -50,14 +56,14 @@
    - Allow a "full history" search override from the extension
    - Allow users to adjust the time decay rate via a settings panel
 
-2. **User Experience & Security**
+3. **User Experience & Security**
    - Add onboarding guide or notification for first-time users
    - Ensure all error states provide actionable feedback and recovery options
    - Document privacy guarantees in the extension README
    - Consider encrypting vector data at rest in the central directory
    - If multi-user, ensure workspace data is isolated and access-controlled
 
-3. **Documentation, Testing, and Future-Proofing**
+4. **Documentation, Testing, and Future-Proofing**
    - Write a clear README for the extension
    - Prepare changelog, icon, and publisher info for VS Code Marketplace
    - Document how to adapt the extension for other IDEs in the future
@@ -71,9 +77,8 @@
    - Start outlining the phase two orchestration layer for agent-to-agent collaboration
 
 **Recommended Order:**
-- Complete all items in Step 1 to ensure a robust, seamless, and maintainable core.
-- Move to Step 2 to polish user experience and security/privacy.
-- Tackle Step 3 in parallel or after, to ensure the project is well-documented, testable, and future-proofed for expansion and collaboration.
+- Complete the MCP server/extension hybrid for vector store first.
+- Then proceed with backend polish, UX/security, and documentation/testing as outlined above.
 
 ## 1. Project Structure
 
@@ -169,6 +174,27 @@
 - Add more status bar states as new features are added.
 - **Dashboard or settings panel for easy plug-and-play configuration of OpenAI, Anthropic, Grok, Gemini, Mistral, and OpenRouter endpoints, allowing users to connect their own agent.**
 - **Phase two: Orchestration layer to enable your agent to work with an IDE agent (if possible), supporting agent-to-agent collaboration.**
+
+## Immediate Action Plan
+
+1. **Scaffold the Node.js MCP Server**
+   - Expose MCP protocol endpoints (stdio/SSE, HTTP)
+   - Implement basic vector memory tools: `add_memory`, `search_memory`, `recall_memory`
+   - Use in-memory storage for now (easy to swap for microservice later)
+   - Log all requests for debugging
+
+2. **Integrate with the Extension**
+   - Add logic to auto-start/connect to the MCP server
+   - Register MCP tools with the extension UI
+   - Allow agents (e.g., Copilot, Cursor) to discover and use the MCP tools
+
+3. **Test End-to-End**
+   - Use a test agent or MCP client to call the tools via the extension
+   - Confirm that memory is being stored, searched, and recalled as expected
+
+4. **Prepare for Backend/Microservice Integration**
+   - Define the API contract for swapping in the Python vector memory service
+   - Plan for seamless upgrade from in-memory to microservice backend
 
 ---
 

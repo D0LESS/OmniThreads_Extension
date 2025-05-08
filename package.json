@@ -2,6 +2,10 @@
   "name": "omnithreads-vector-memory",
   "displayName": "OmniThreads Vector Memory",
   "description": "Enable vector memory and compliance for any IDE agent in VS Code, powered by ChromaDB.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/D0LESS/OmniThreads_Extension.git"
+  },
   "version": "0.0.1",
   "publisher": "your-publisher-name",
   "engines": {
@@ -45,18 +49,22 @@
     "test": "mocha -r ts-node/register src/test/**/*.ts"
   },
   "devDependencies": {
+    "@types/chai": "^4.3.20",
+    "@types/mocha": "^10.0.10",
     "@types/node": "^18.0.0",
     "@types/node-fetch": "^2.6.12",
     "@types/vscode": "^1.80.0",
     "@vscode/vsce": "^3.3.2",
-    "typescript": "^5.0.0",
-    "mocha": "^10.0.0",
-    "chai": "^4.3.0",
-    "@types/mocha": "^10.0.0",
-    "@types/chai": "^4.3.0",
-    "ts-node": "^10.0.0"
+    "chai": "^4.5.0",
+    "mocha": "^10.8.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.0.0"
   },
   "dependencies": {
-    "node-fetch": "^2.7.0"
+    "axios": "^1.9.0",
+    "body-parser": "^2.2.0",
+    "express": "^5.1.0",
+    "node-fetch": "^2.7.0",
+    "uuid": "^11.1.0"
   }
 }

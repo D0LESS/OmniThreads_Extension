@@ -4,6 +4,7 @@ import { addToCache, getCache, clearCache, initTempCache, moveCacheTo } from './
 import * as fs from 'fs';
 import * as path from 'path';
 import { registerLogCommand } from './backendManager';
+import * as mcpClient from './mcpClient';
 
 let statusBarItem: vscode.StatusBarItem;
 let currentState: 'cached' | 'active' | 'failed' = 'cached';
@@ -28,6 +29,28 @@ export function activate(context: vscode.ExtensionContext) {
         }),
         vscode.commands.registerCommand('omnithreads.checkBackendStatus', async () => {
             // Placeholder for backend status check
+        }),
+        vscode.commands.registerCommand('omnithreads.addMemory', async () => {
+            const prompt = await vscode.window.showInputBox({ prompt: 'Enter prompt' });
+            const response = await vscode.window.showInputBox({ prompt: 'Enter response' });
+            if (prompt && response) {
+                const result = await mcpClient.addMemory(prompt, response);
+                vscode.window.showInformationMessage(`Memory added! ID: ${result.id}`);
+            }
+        }),
+        vscode.commands.registerCommand('omnithreads.searchMemory', async () => {
+            const query = await vscode.window.showInputBox({ prompt: 'Enter search query' });
+            if (query) {
+                const results = await mcpClient.searchMemory(query);
+                vscode.window.showQuickPick(results.map((r: any) => `${r.prompt} → ${r.response}`), { placeHolder: 'Search results' });
+            }
+        }),
+        vscode.commands.registerCommand('omnithreads.recallMemory', async () => {
+            const id = await vscode.window.showInputBox({ prompt: 'Enter memory ID' });
+            if (id) {
+                const result = await mcpClient.recallMemory(id);
+                vscode.window.showInformationMessage(`Prompt: ${result.prompt}\nResponse: ${result.response}`);
+            }
         })
     );
 

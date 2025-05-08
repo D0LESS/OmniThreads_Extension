@@ -34,33 +34,102 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.activate = activate;
+exports.logConversation = logConversation;
 exports.deactivate = deactivate;
 const vscode = __importStar(require("vscode"));
-const compliance_1 = require("./compliance");
+const config_1 = require("./config");
+const cache_1 = require("./cache");
+const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
 const backendManager_1 = require("./backendManager");
 let statusBarItem;
+let currentState = 'cached';
 function activate(context) {
-    console.log("OmniThreads extension activated!"); // Debug log for activation
+    console.log("OmniThreads extension activated!");
     statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-    statusBarItem.text = 'OmniVector: $(sync~spin) Checking...';
+    statusBarItem.text = 'OmniThreads: $(sync~spin) Initializing...';
     statusBarItem.show();
+    // Initialize temp cache for this session
+    const sessionId = (0, config_1.getWorkspaceId)() || Date.now().toString();
+    (0, cache_1.initTempCache)(sessionId);
     context.subscriptions.push(vscode.commands.registerCommand('omnithreads.checkCompliance', async () => {
-        const compliant = await (0, compliance_1.checkCompliance)();
-        vscode.window.showInformationMessage(compliant ? "Workspace is compliant." : "Workspace is NOT compliant.");
+        await updateStatusBar();
+        vscode.window.showInformationMessage(getStatusMessage());
     }), vscode.commands.registerCommand('omnithreads.startBackend', () => {
-        (0, backendManager_1.startBackend)();
+        // Placeholder for backend start logic
     }), vscode.commands.registerCommand('omnithreads.checkBackendStatus', async () => {
-        const ok = await (0, backendManager_1.checkBackendStatus)();
-        vscode.window.showInformationMessage(ok ? "Backend is running." : "Backend is NOT running.");
+        // Placeholder for backend status check
     }));
-    // On activation, check compliance and update status bar
+    // Ensure central directory exists
+    if (!fs.existsSync(config_1.OMNIVECTOR_ROOT)) {
+        fs.mkdirSync(config_1.OMNIVECTOR_ROOT, { recursive: true });
+    }
+    // On activation, update status bar
     updateStatusBar();
+    // Listen for workspace save events to transition from cached to active
+    vscode.workspace.onDidSaveTextDocument(() => {
+        updateStatusBar();
+    });
+    vscode.workspace.onDidChangeWorkspaceFolders(() => {
+        updateStatusBar();
+    });
+    (0, backendManager_1.registerLogCommand)(context);
+}
+function getStatusMessage() {
+    switch (currentState) {
+        case 'active':
+            return 'OmniThreads: 🟢 Active (workspace data stored centrally)';
+        case 'failed':
+            return 'OmniThreads: 🔴 Failed - Storing in Cache (will attempt to recover)';
+        default:
+            return 'OmniThreads: 🟡 Cached (unsaved or error, data is temporary)';
+    }
 }
 async function updateStatusBar() {
-    const compliant = await (0, compliance_1.checkCompliance)();
-    statusBarItem.text = compliant
-        ? 'OmniVector: $(check) Compliant'
-        : 'OmniVector: $(error) Not Compliant';
+    try {
+        const dataDir = (0, config_1.getWorkspaceDataDir)();
+        if (!dataDir) {
+            currentState = 'cached';
+            statusBarItem.text = 'OmniThreads: $(warning) 🟡 Cached';
+            return;
+        }
+        // Try to ensure the data directory exists
+        if (!fs.existsSync(dataDir)) {
+            fs.mkdirSync(dataDir, { recursive: true });
+        }
+        // If we have cached data and just became active, move it
+        if ((0, cache_1.getCache)().length > 0 && currentState !== 'active') {
+            (0, cache_1.moveCacheTo)(dataDir);
+        }
+        currentState = 'active';
+        statusBarItem.text = 'OmniThreads: $(check) 🟢 Active';
+    }
+    catch (err) {
+        currentState = 'failed';
+        statusBarItem.text = 'OmniThreads: $(error) 🔴 Failed - Storing in Cache';
+        // Fallback: keep caching in memory
+    }
+}
+function logConversation(pair) {
+    // If workspace is unsaved or in error, cache it
+    if (currentState === 'cached' || currentState === 'failed') {
+        (0, cache_1.addToCache)(pair);
+    }
+    else {
+        // Save directly to central storage (or send to backend)
+        const dataDir = (0, config_1.getWorkspaceDataDir)();
+        if (dataDir) {
+            if (!fs.existsSync(dataDir))
+                fs.mkdirSync(dataDir, { recursive: true });
+            const file = path.join(dataDir, 'conversations.json');
+            let arr = [];
+            if (fs.existsSync(file)) {
+                arr = JSON.parse(fs.readFileSync(file, 'utf-8'));
+            }
+            arr.push(pair);
+            fs.writeFileSync(file, JSON.stringify(arr, null, 2));
+        }
+    }
 }
 function deactivate() {
     if (statusBarItem) {
