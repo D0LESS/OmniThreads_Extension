@@ -101,3 +101,4 @@ OmniThreads Extension brings vector memory and compliance to any IDE agent in VS
 
 ---
 For more, see the build plan and in-code documentation. ECHO is on.
+"# Trigger CI"  
