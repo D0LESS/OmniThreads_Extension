@@ -1,0 +1,62 @@
+{
+  "name": "omnithreads-vector-memory",
+  "displayName": "OmniThreads Vector Memory",
+  "description": "Enable vector memory and compliance for any IDE agent in VS Code, powered by ChromaDB.",
+  "version": "0.0.1",
+  "publisher": "your-publisher-name",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:omnithreads.checkCompliance",
+    "onCommand:omnithreads.startBackend",
+    "onCommand:omnithreads.checkBackendStatus",
+    "onCommand:omnithreads.vectorSearch"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "omnithreads.checkCompliance",
+        "title": "OmniThreads: Check Compliance"
+      },
+      {
+        "command": "omnithreads.startBackend",
+        "title": "OmniThreads: Start Backend"
+      },
+      {
+        "command": "omnithreads.checkBackendStatus",
+        "title": "OmniThreads: Check Backend Status"
+      },
+      {
+        "command": "omnithreads.vectorSearch",
+        "title": "OmniThreads: Vector Search"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "tsc -p ./",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "test": "mocha -r ts-node/register src/test/**/*.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/node-fetch": "^2.6.12",
+    "@types/vscode": "^1.80.0",
+    "@vscode/vsce": "^3.3.2",
+    "typescript": "^5.0.0",
+    "mocha": "^10.0.0",
+    "chai": "^4.3.0",
+    "@types/mocha": "^10.0.0",
+    "@types/chai": "^4.3.0",
+    "ts-node": "^10.0.0"
+  },
+  "dependencies": {
+    "node-fetch": "^2.7.0"
+  }
+}
