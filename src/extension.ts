@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { registerLogCommand } from './backendManager';
 import * as mcpClient from './mcpClient';
+import { ensureContextFile, watchContextFile } from '../omnivector_workspace/context_manager';
 
 let statusBarItem: vscode.StatusBarItem;
 let currentState: 'cached' | 'active' | 'failed' = 'cached';
@@ -13,6 +14,7 @@ export function activate(context: vscode.ExtensionContext) {
     console.log("OmniThreads extension activated!");
     statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
     statusBarItem.text = 'OmniThreads: $(sync~spin) Initializing...';
+    statusBarItem.tooltip = 'OmniThreads: Vector memory and compliance status';
     statusBarItem.show();
 
     // Initialize temp cache for this session
@@ -34,22 +36,49 @@ export function activate(context: vscode.ExtensionContext) {
             const prompt = await vscode.window.showInputBox({ prompt: 'Enter prompt' });
             const response = await vscode.window.showInputBox({ prompt: 'Enter response' });
             if (prompt && response) {
-                const result = await mcpClient.addMemory(prompt, response);
-                vscode.window.showInformationMessage(`Memory added! ID: ${result.id}`);
+                try {
+                    const result = await mcpClient.memoryRecallAndStore({ query: prompt, response });
+                    vscode.window.showInformationMessage(`Memory added! ID: ${result.logged?.id}`);
+                } catch (err: any) {
+                    vscode.window.showErrorMessage('Failed to add memory. Please ensure the MCP server is running and try again.');
+                }
+            } else {
+                vscode.window.showWarningMessage('Prompt and response are required.');
             }
         }),
         vscode.commands.registerCommand('omnithreads.searchMemory', async () => {
             const query = await vscode.window.showInputBox({ prompt: 'Enter search query' });
             if (query) {
-                const results = await mcpClient.searchMemory(query);
-                vscode.window.showQuickPick(results.map((r: any) => `${r.prompt} → ${r.response}`), { placeHolder: 'Search results' });
+                try {
+                    const results = await mcpClient.memoryRecallAndStore({ query });
+                    if ((results.recalled || []).length === 0) {
+                        vscode.window.showInformationMessage('No relevant memories found.');
+                    } else {
+                        vscode.window.showQuickPick((results.recalled || []).map((r: any) => `${r.prompt} → ${r.response}`), { placeHolder: 'Search results' });
+                    }
+                } catch (err: any) {
+                    vscode.window.showErrorMessage('Failed to search memory. Please ensure the MCP server is running and try again.');
+                }
+            } else {
+                vscode.window.showWarningMessage('Search query is required.');
             }
         }),
         vscode.commands.registerCommand('omnithreads.recallMemory', async () => {
             const id = await vscode.window.showInputBox({ prompt: 'Enter memory ID' });
             if (id) {
-                const result = await mcpClient.recallMemory(id);
-                vscode.window.showInformationMessage(`Prompt: ${result.prompt}\nResponse: ${result.response}`);
+                try {
+                    const results = await mcpClient.memoryRecallAndStore({ query: '' });
+                    const found = (results.recalled || []).find((r: any) => r.id === id);
+                    if (found) {
+                        vscode.window.showInformationMessage(`Prompt: ${found.prompt}\nResponse: ${found.response}`);
+                    } else {
+                        vscode.window.showWarningMessage('Memory not found.');
+                    }
+                } catch (err: any) {
+                    vscode.window.showErrorMessage('Failed to recall memory. Please ensure the MCP server is running and try again.');
+                }
+            } else {
+                vscode.window.showWarningMessage('Memory ID is required.');
             }
         })
     );
@@ -71,6 +100,16 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     registerLogCommand(context);
+
+    setupProjectContextWatcher();
+
+    // Listen for workspace save events to transition from cached to active
+    vscode.workspace.onDidSaveTextDocument(() => {
+        setupProjectContextWatcher();
+    });
+    vscode.workspace.onDidChangeWorkspaceFolders(() => {
+        setupProjectContextWatcher();
+    });
 }
 
 function getStatusMessage(): string {
@@ -133,4 +172,12 @@ export function deactivate() {
     if (statusBarItem) {
         statusBarItem.dispose();
     }
+}
+
+function setupProjectContextWatcher() {
+    const folders = vscode.workspace.workspaceFolders;
+    if (!folders || folders.length === 0) return;
+    const root = folders[0].uri.fsPath;
+    ensureContextFile(root);
+    watchContextFile(root);
 }

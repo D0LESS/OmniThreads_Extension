@@ -17,6 +17,12 @@ export const BACKEND_START_ARGS = [
 
 export const OMNIVECTOR_ROOT = path.join(os.homedir(), '.omnivector_workspaces');
 
+// Internal-only settings (not user-tunable)
+// Adjust these values for development or advanced use only.
+export const TIME_DECAY_RATE = 0.8; // Default decay rate for vector memory relevance
+export const ENABLE_FULL_HISTORY_SEARCH = false; // Allow full history search override
+// Add more internal settings below as needed
+
 export function getWorkspaceId(): string | null {
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || folders.length === 0) return null;

@@ -40,7 +40,18 @@
         "command": "omnithreads.vectorSearch",
         "title": "OmniThreads: Vector Search"
       }
-    ]
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "OmniThreads Settings",
+      "properties": {
+        "omnithreads.mcpServerUrl": {
+          "type": "string",
+          "default": "http://localhost:8001/mcp",
+          "description": "URL of the MCP server for vector memory and compliance."
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "tsc -p ./",
@@ -66,6 +77,7 @@
     "axios": "^1.9.0",
     "body-parser": "^2.2.0",
     "express": "^5.1.0",
+    "mongodb": "^6.16.0",
     "node-fetch": "^2.7.0",
     "uuid": "^11.1.0"
   }

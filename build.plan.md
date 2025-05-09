@@ -1,4 +1,4 @@
-# OmniThreads Extension Build Plan (18/35)
+# OmniThreads Extension Build Plan (updated)
 
 ## Progress Tracker
 
@@ -13,16 +13,21 @@
 - [x] Robust error handling & automatic recovery
 - [x] User notifications & error reporting
 - [x] requirements.txt for backend dependencies
+- [x] MCP server/extension hybrid for vector store
+- [x] Unified /memory_recall_and_store endpoint (recall, logging, dedup, time decay, compliance)
+- [x] Store all prompt/response pairs in ChromaDB via the backend
+- [x] Implement gradual time decay in the backend search endpoint
+- [x] Store timestamps with each vector entry
+- [x] Deduplication logic in recall/store
+- [x] Compliance fields and scoring in memory entries
+- [x] Extension updated to use unified endpoint everywhere
+- [x] Documented endpoint for Cursor/agent integration
 - [ ] Final documentation & polish
 - [ ] Add API versioning to backend endpoints for future-proofing
 - [ ] Implement graceful backend shutdown on VS Code close or extension deactivation
 - [ ] Implement logic to clean up unused workspace data in `~/.omnivector_workspaces`
 - [ ] Add tooltips to status bar icons for clarity
-- [x] Store all prompt/response pairs in ChromaDB via the backend
-- [x] Implement gradual time decay in the backend search endpoint
-- [x] Store timestamps with each vector entry
 - [ ] Allow a "full history" search override from the extension
-- [ ] Allow users to adjust the time decay rate via a settings panel
 - [ ] Add onboarding guide or notification for first-time users
 - [ ] Ensure all error states provide actionable feedback and recovery options
 - [ ] Document privacy guarantees in the extension README
@@ -40,45 +45,31 @@
 - [ ] Architect the backend to allow for future plugins (e.g., different vector DBs, compliance modules)
 - [ ] Start outlining the phase two orchestration layer for agent-to-agent collaboration
 
-## Immediate Next Steps
+## Immediate Next Steps (as of now)
 
-1. **Top Priority: MCP Server/Extension Hybrid for Vector Store**
-   - Design and implement the MCP server/extension hybrid as the first-class vector memory provider for the agent (me/OpenAI) and any IDE agent.
-   - Expose vector store functions (add, search, recall, time decay) via MCP and HTTP APIs.
-   - Ensure plug-and-play setup for VS Code, Cursor, and custom agents.
-   - All other work is secondary until this is functional.
+1. **Polish & Error Handling**
+   - Add actionable error messages and fallback logic in the extension and backend.
+   - Add tooltips to status bar icons for clarity.
+2. **Documentation & Marketplace Prep**
+   - Finalize README, changelog, and add an icon for VS Code Marketplace.
+   - Document privacy guarantees and onboarding for new users.
+3. **Testing & Validation**
+   - Add unit and integration tests for both backend and extension.
+   - Add end-to-end tests simulating real user workflows.
+4. **Backend & Extension Polish**
+   - Implement graceful backend shutdown on VS Code close or extension deactivation.
+   - Implement logic to clean up unused workspace data in `~/.omnivector_workspaces`.
+   - Add API versioning to backend endpoints for future-proofing.
 
-2. **Backend & Core Extension Polish**
-   - Add API versioning to backend endpoints
-   - Implement graceful backend shutdown on VS Code close or extension deactivation
-   - Implement logic to clean up unused workspace data in `~/.omnivector_workspaces`
-   - Add tooltips to status bar icons for clarity
-   - Allow a "full history" search override from the extension
-   - Allow users to adjust the time decay rate via a settings panel
+---
 
-3. **User Experience & Security**
-   - Add onboarding guide or notification for first-time users
-   - Ensure all error states provide actionable feedback and recovery options
-   - Document privacy guarantees in the extension README
-   - Consider encrypting vector data at rest in the central directory
-   - If multi-user, ensure workspace data is isolated and access-controlled
+# Next Steps (Actionable)
 
-4. **Documentation, Testing, and Future-Proofing**
-   - Write a clear README for the extension
-   - Prepare changelog, icon, and publisher info for VS Code Marketplace
-   - Document how to adapt the extension for other IDEs in the future
-   - Update documentation to reflect the new, self-contained structure
-   - Document the backend API and extension architecture for future contributors
-   - Add unit and integration tests for both backend (Python) and extension (TypeScript)
-   - Add end-to-end tests simulating real user workflows
-   - Aggregate logs from both frontend and backend for easier debugging (optionally expose a "Show Logs" command)
-   - Begin scaffolding a settings UI for agent endpoints, decay rate, and compliance options
-   - Architect the backend to allow for future plugins (e.g., different vector DBs, compliance modules)
-   - Start outlining the phase two orchestration layer for agent-to-agent collaboration
-
-**Recommended Order:**
-- Complete the MCP server/extension hybrid for vector store first.
-- Then proceed with backend polish, UX/security, and documentation/testing as outlined above.
+1. **Add actionable error handling and tooltips in the extension.**
+2. **Finalize and polish documentation (README, changelog, privacy, onboarding).**
+3. **Add and run tests for backend and extension.**
+4. **Prepare for VS Code Marketplace release (icon, publisher info, packaging).**
+5. **(Optional) Implement backend shutdown and workspace cleanup logic.**
 
 ## 1. Project Structure
 
@@ -202,4 +193,85 @@
 1. Test the extension and backend end-to-end to ensure no references to `Pseudovector` remain and all features work as expected.
 2. Implement any missing error handling, onboarding, and polish steps from above.
 3. Begin adding automated tests and documentation for maintainability and future expansion.
+
+## Internal-Only Settings (Developer Reference)
+
+All internal configuration values (such as time decay rate, full history search toggle, etc.) are centralized in `src/config.ts`.
+
+- These are **not user-tunable** and should only be changed by developers or advanced users.
+- Example settings:
+  - `TIME_DECAY_RATE`: Default decay rate for vector memory relevance
+  - `ENABLE_FULL_HISTORY_SEARCH`: Allow full history search override
+- Add new internal settings to `src/config.ts` as needed.
+
+## Planned: Add SSE (Server-Sent Events) Support for MCP Server
+
+To enable full compatibility with Cursor and other agents expecting SSE, add an SSE endpoint to the Node.js MCP server. This will allow streaming tool discovery and/or event updates.
+
+### Steps to Add SSE Support:
+1. **Research Cursor's SSE requirements:**
+   - Determine the expected SSE endpoint (e.g., `/mcp/events`, `/mcp/sse`, or base `/mcp`).
+   - Identify what events or data Cursor expects to receive (tool list, tool updates, etc.).
+2. **Implement SSE endpoint in `mcp_server.js`:**
+   - Use Express or a compatible library to add an SSE route (e.g., `/mcp/events`).
+   - On client connect, send the current tool list as an SSE event.
+   - Optionally, stream updates if tools change or new events occur.
+3. **Test with Cursor:**
+   - Register the MCP server in Cursor with the SSE endpoint.
+   - Confirm Cursor can connect and discover tools.
+4. **Document SSE support:**
+   - Update README and build plan with SSE usage and configuration.
+
+**Note:** SSE is not required for basic HTTP tool calls, but is needed for full Cursor integration.
+
+## MCP Server Lifecycle Management & Seamless User Experience
+
+### Breakdown & Required Features
+- SSE Endpoint for real-time query/retrieval (no storage).
+- Stdio Command for prompt-response storage/embedding (no retrieval).
+- Both are part of the same MCP server codebase, but are separate entry points.
+- Extension auto-detects Cursor AI and sets up everything (ChromaDB, MCP server, ports).
+- No manual commands required from the user.
+- Extension provides copy-paste MCP config for Cursor (with port info).
+- Handles port conflicts and provides user-friendly prompts if needed.
+- All requirements (Node, Python, ChromaDB, etc.) are installed automatically or with clear prompts.
+- MCP server is started when the platform/extension is launched and stopped when it is closed.
+
+### How We'll Accomplish This
+1. MCP Server (Node.js)
+   - Add SSE endpoint for retrieval (e.g., `/mcp/events`).
+   - Add stdio command for storage (e.g., `node mcp_server.js store`).
+   - Share vector store logic between both entry points.
+   - Advertise both tools in `/mcp/tools` with correct types (`sse` and `stdio`).
+2. Extension (VS Code)
+   - On install/first run:
+     - Detect Cursor AI.
+     - Install dependencies (Node, Python, ChromaDB).
+     - Start MCP server (both SSE and stdio).
+     - Detect and resolve port conflicts.
+     - Display MCP config for Cursor (with correct port).
+   - On deactivate/close:
+     - Stop MCP server process.
+   - Settings/Instructions:
+     - Provide copy-paste config for Cursor MCP settings.
+     - Update instructions if port is not default.
+3. Documentation
+   - Update README and onboarding with new flow and instructions.
+
+### Next Steps & Instructions
+1. Implement SSE and stdio entry points in MCP server.
+2. Refactor extension for onboarding, auto-setup, and MCP server lifecycle management.
+3. Update tool discovery and schemas.
+4. Test end-to-end with Cursor AI.
+5. Update documentation and onboarding.
+6. Remove/clean up legacy code as needed.
+
+**Instructions for Users (to be included in onboarding/README):**
+- Install the extension.
+- On first run, the extension will auto-detect Cursor AI, install dependencies, and start the MCP server.
+- If the default port is taken, the extension will prompt you and provide updated instructions.
+- Copy the provided MCP config into Cursor's settings.
+- The MCP server will start automatically with VS Code and stop when you close it—no manual commands needed.
+
+---
 

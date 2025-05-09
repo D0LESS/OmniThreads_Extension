@@ -8,6 +8,7 @@ from .vector_memory import vector_status_signature
 import json
 import sys
 import datetime
+import threading
 
 CONFIRM_FILE = ".omnivector_workspace"
 WORKSPACE_ROOT = os.path.expanduser(r"~/.omnivector_workspaces")
@@ -147,6 +148,13 @@ def get_vector_status(workspace: str = Query(..., description="Workspace name"))
     last = lines[-1].strip()
     return {"last_status": last, "all_status": lines[-10:]}
 
+@app.post('/shutdown')
+def shutdown():
+    def stopper():
+        sys.exit(0)
+    threading.Thread(target=stopper).start()
+    return {"status": "shutting down"}
+
 def main():
     parser = argparse.ArgumentParser(description="OmniThreads Vector Memory Backend")
     parser.add_argument("--workspace", type=str, default=None, help="Workspace name (overrides autodetect)")
@@ -186,6 +194,9 @@ def main():
     print("\nOr, if your environment supports it, click the 'Run' button above.")
     # Step 5: Start the API
     uvicorn.run("OmniThreadsExtension.backend.server.session_bootstrapper:app", host="0.0.0.0", port=args.port, reload=False)
+
+# TODO: Implement graceful shutdown logic for backend when VS Code closes or extension deactivates.
+# This could be triggered by a signal or a shutdown endpoint.
 
 if __name__ == "__main__":
     main() 

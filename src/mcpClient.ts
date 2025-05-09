@@ -2,29 +2,32 @@ import fetch from 'node-fetch';
 
 const MCP_SERVER = 'http://localhost:8001/mcp';
 
-export async function addMemory(prompt: string, response: string) {
-  const res = await fetch(`${MCP_SERVER}/add_memory`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt, response })
-  });
-  return res.json();
+export interface MemoryPair {
+  prompt: string;
+  response: string;
 }
 
-export async function searchMemory(query: string, n_results = 5) {
-  const res = await fetch(`${MCP_SERVER}/search_memory`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, n_results })
-  });
-  return res.json();
+export interface ComplianceFields {
+  [key: string]: any;
 }
 
-export async function recallMemory(id: string) {
-  const res = await fetch(`${MCP_SERVER}/recall_memory`, {
+export async function memoryRecallAndStore({
+  query,
+  response = undefined,
+  last_pairs = [],
+  compliance_score = null,
+  compliance_fields = {}
+}: {
+  query: string;
+  response?: string;
+  last_pairs?: MemoryPair[];
+  compliance_score?: number | null;
+  compliance_fields?: ComplianceFields;
+}) {
+  const res = await fetch(`${MCP_SERVER}/memory_recall_and_store`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id })
+    body: JSON.stringify({ query, response, last_pairs, compliance_score, compliance_fields })
   });
   return res.json();
 }
